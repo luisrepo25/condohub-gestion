@@ -1,0 +1,26 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: gestion
+  datasource:
+    url: ${GESTION_DB_URL:jdbc:postgresql://localhost:5432/gestion}
+    username: ${GESTION_DB_USER:gestion}
+    password: ${GESTION_DB_PASSWORD:gestion_dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none        # el esquema lo manejan las migraciones Flyway
+  flyway:
+    locations: classpath:db/migration
+  graphql:
+    schema:
+      file-extensions: .graphql,.graphqls
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Las claves se piden al JWKS; el iss del token debe ser exactamente el issuer.
+          issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8180/realms/condohub}
+          jwk-set-uri: ${KEYCLOAK_JWKS:http://localhost:8180/realms/condohub/protocol/openid-connect/certs}

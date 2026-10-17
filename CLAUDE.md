@@ -89,13 +89,13 @@ GraphiQL en dev: `http://localhost:8081/graphiql`.
 - Migraciones Flyway `V<n>__descripcion.sql`; nunca edites una migración ya mergeada.
 - Base de datos: `src/main/resources/db/migration` (esquema y vistas), `db/seed/R__datos_demo.sql` (solo perfil `dev`), pruebas de reglas en `src/test/resources/db/pruebas_reglas_bd.sql`. Diseño completo en `docs/datos/modelo-de-datos.md` del repo `condohub`. Las restricciones y triggers de la base (F3, F5–F8) son la última defensa: el dominio valida primero y nunca se apoya solo en ellos.
 
-## Estado y seguridad (esqueleto, 14/10/2026)
+## Estado y seguridad (actualizado 16/10/2026)
 
-Hecha una rebanada vertical: `salud` (cualquier rol), `estadoDeCuenta(unidadId)` (ADMIN todas; RESIDENTE solo su unidad, F1; GUARDIA no) y `pagosPendientes` (ADMIN). Todo lo demás está por hacer. Contrato mínimo en `contracts/graphql/schema.graphql`.
+Hecho: `salud` (cualquier rol), `estadoDeCuenta(unidadId)` (ADMIN todas; RESIDENTE solo su unidad, F1; GUARDIA no), `pagosPendientes` (ADMIN), `miPerfil` (cualquier rol: roles del token y, si la cuenta está enlazada a una persona, su `personaId` y unidades), mutation `enlazarCuenta(personaId, keycloakSub)` (ADMIN; enlaza la cuenta de Keycloak con la persona, F1) y `morosos` (ADMIN, incluida la cuenta de servicio de n8n y Agentes: unidades morosas con el contacto del titular). Todo lo demás está por hacer (emisión de expensas, cargos, pagos, recargos, proveedores, outbox y saga). Contrato mínimo en `contracts/graphql/schema.graphql`.
 
 - JWT de Keycloak: `adapter/config/SeguridadConfig.java` (`realm_access.roles` → `ROLE_*`; 401 en problem+json). Rol por resolver con `@PreAuthorize`; la regla por dato (F1) vive en `domain/service/PoliticaVisibilidad`. El vínculo token → unidad es `persona.keycloak_sub`.
 - Errores GraphQL: `extensions.code` = regla (`F1`), `FORBIDDEN` o `NOT_FOUND` (`GraphQlErrorResolver`).
-- Correr: `mvn spring-boot:run -Dspring-boot.run.profiles=dev` (el perfil `dev` carga las 200 unidades). `mvn test`: 15 pruebas unitarias; `mvn verify`: además 7 de integración con Testcontainers (necesita Docker). Aún no hay `mvnw` ni spotless.
+- Correr: `mvn spring-boot:run -Dspring-boot.run.profiles=dev` (el perfil `dev` carga las 200 unidades). `mvn test`: 24 pruebas unitarias; `mvn verify`: además 16 de integración con Testcontainers (necesita Docker). Imagen: `Dockerfile` multi-stage; CI en `.github/workflows/ci.yml`. Aún no hay `mvnw` ni spotless.
 - Variables: `GESTION_DB_URL`, `GESTION_DB_USER`, `GESTION_DB_PASSWORD`, `KEYCLOAK_ISSUER`, `KEYCLOAK_JWKS`. Con el 5432 ocupado: compose con `POSTGRES_PORT=5433` y `GESTION_DB_URL=jdbc:postgresql://localhost:5433/gestion`.
 - Por el gateway: `POST http://localhost:8080/gestion/graphql` con `Authorization: Bearer <token>`.
 

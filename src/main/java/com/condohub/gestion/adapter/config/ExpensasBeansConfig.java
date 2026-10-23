@@ -6,6 +6,7 @@ import com.condohub.gestion.application.port.out.ParametroRepository;
 import com.condohub.gestion.application.port.out.PeriodoExpensasRepository;
 import com.condohub.gestion.application.usecase.EmitirExpensasService;
 import com.condohub.gestion.domain.service.CalculadoraExpensas;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,12 +19,19 @@ class ExpensasBeansConfig {
         return new CalculadoraExpensas();
     }
 
+    /** Reloj del sistema en UTC (fechas en UTC); en los tests se reemplaza por uno fijo. */
+    @Bean
+    Clock reloj() {
+        return Clock.systemUTC();
+    }
+
     @Bean
     EmitirExpensasUseCase emitirExpensas(
             PeriodoExpensasRepository periodos,
             AlicuotaRepository alicuotas,
             ParametroRepository parametros,
-            CalculadoraExpensas calculadora) {
-        return new EmitirExpensasService(periodos, alicuotas, parametros, calculadora);
+            CalculadoraExpensas calculadora,
+            Clock reloj) {
+        return new EmitirExpensasService(periodos, alicuotas, parametros, calculadora, reloj);
     }
 }

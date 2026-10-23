@@ -38,6 +38,13 @@ class PeriodoTest {
     }
 
     @Test
+    void F3_un_mes_es_anterior_a_otro_solo_si_es_de_antes() {
+        assertThat(Periodo.de("2026-09").esAnteriorA(Periodo.de("2026-10"))).isTrue();
+        assertThat(Periodo.de("2026-10").esAnteriorA(Periodo.de("2026-10"))).isFalse();
+        assertThat(Periodo.delMes(LocalDate.of(2026, 10, 22))).isEqualTo(Periodo.de("2026-10"));
+    }
+
+    @Test
     void F3_periodo_se_compara_por_valor() {
         assertThat(Periodo.de("2026-11")).isEqualTo(Periodo.de("2026-11"));
     }

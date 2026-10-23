@@ -56,35 +56,43 @@ class ExpensasGraphQlIT {
 
     @Test
     void F3_admin_emite_las_expensas_de_un_periodo_nuevo() throws Exception {
-        graphql(token(ADMIN, "ADMIN"), emitir("2026-12", "60000"))
+        graphql(token(ADMIN, "ADMIN"), emitir("2030-12", "60000"))
                 .andExpect(jsonPath("$.errors").doesNotExist())
-                .andExpect(jsonPath("$.data.emitirExpensas.periodo").value("2026-12"))
-                .andExpect(jsonPath("$.data.emitirExpensas.fechaVencimiento").value("2026-12-10"))
+                .andExpect(jsonPath("$.data.emitirExpensas.periodo").value("2030-12"))
+                .andExpect(jsonPath("$.data.emitirExpensas.fechaVencimiento").value("2030-12-10"))
                 .andExpect(jsonPath("$.data.emitirExpensas.unidades").value(200))
                 .andExpect(jsonPath("$.data.emitirExpensas.total").value("60000.00"));
 
         var suma = jdbc.queryForObject(
                 "SELECT sum(c.monto) FROM cargo c JOIN periodo_expensas p ON p.id = c.periodo_id"
-                        + " WHERE p.periodo = DATE '2026-12-01' AND c.tipo = 'EXPENSA'",
+                        + " WHERE p.periodo = DATE '2030-12-01' AND c.tipo = 'EXPENSA'",
                 BigDecimal.class);
         assertThat(suma).isEqualByComparingTo("60000.00");
     }
 
     @Test
     void F3_un_periodo_ya_emitido_responde_F3() throws Exception {
-        graphql(token(ADMIN, "ADMIN"), emitir("2026-10", "60000"))
+        graphql(token(ADMIN, "ADMIN"), emitir("2030-11", "60000")).andExpect(jsonPath("$.errors").doesNotExist());
+
+        graphql(token(ADMIN, "ADMIN"), emitir("2030-11", "60000"))
+                .andExpect(jsonPath("$.errors[0].extensions.code").value("F3"));
+    }
+
+    @Test
+    void F3_un_mes_pasado_responde_F3() throws Exception {
+        graphql(token(ADMIN, "ADMIN"), emitir("2020-01", "60000"))
                 .andExpect(jsonPath("$.errors[0].extensions.code").value("F3"));
     }
 
     @Test
     void F10_presupuesto_con_mas_de_dos_decimales_responde_F10() throws Exception {
-        graphql(token(ADMIN, "ADMIN"), emitir("2027-01", "100.123"))
+        graphql(token(ADMIN, "ADMIN"), emitir("2031-01", "100.123"))
                 .andExpect(jsonPath("$.errors[0].extensions.code").value("F10"));
     }
 
     @Test
     void solo_admin_puede_emitir_expensas() throws Exception {
-        graphql(token("00000000-0000-0000-0000-00000000a002", "RESIDENTE"), emitir("2027-02", "60000"))
+        graphql(token("00000000-0000-0000-0000-00000000a002", "RESIDENTE"), emitir("2031-02", "60000"))
                 .andExpect(jsonPath("$.errors[0].extensions.code").value("FORBIDDEN"));
     }
 }

@@ -22,6 +22,15 @@ public record Periodo(YearMonth mes) {
         }
     }
 
+    /** Periodo al que pertenece una fecha. */
+    public static Periodo delMes(LocalDate fecha) {
+        return new Periodo(YearMonth.from(fecha));
+    }
+
+    public boolean esAnteriorA(Periodo otro) {
+        return mes.isBefore(otro.mes);
+    }
+
     /** F3: primer día del mes, en que se emiten las expensas. */
     public LocalDate primerDia() {
         return mes.atDay(1);

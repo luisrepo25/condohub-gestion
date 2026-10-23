@@ -22,19 +22,25 @@ public record PeriodoExpensas(
     }
 
     /**
-     * F2, F3, F4: calcula y emite las expensas del periodo.
+     * F2, F3, F4: calcula y emite las expensas del periodo. Solo el mes actual o uno futuro (F3).
      *
+     * @param periodoActual mes en curso según el reloj del sistema
      * @param alicuotasPorUnidad alícuotas de las unidades activas, por id de unidad
      * @param diaVencimiento parámetro {@code expensas.dia_vencimiento}
      * @param emitidoPor {@code sub} de Keycloak del ADMIN que emite
      */
     public static PeriodoExpensas emitir(
             Periodo periodo,
+            Periodo periodoActual,
             Dinero presupuesto,
             Map<UUID, Alicuota> alicuotasPorUnidad,
             int diaVencimiento,
             String emitidoPor,
             CalculadoraExpensas calculadora) {
+        if (periodo.esAnteriorA(periodoActual)) {
+            throw new ReglaNegocioVioladaException(
+                    "F3", "No se emiten expensas de un mes pasado (" + periodo + "): nacerían vencidas");
+        }
         var expensas = calculadora.calcular(presupuesto, alicuotasPorUnidad);
         if (expensas.values().stream().anyMatch(expensa -> expensa.monto().signum() == 0)) {
             throw new ReglaNegocioVioladaException(

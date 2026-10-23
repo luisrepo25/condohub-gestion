@@ -11,7 +11,10 @@ import com.condohub.gestion.domain.service.CalculadoraExpensas;
 import com.condohub.gestion.domain.valueobject.Alicuota;
 import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.Periodo;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,8 +26,28 @@ class EmitirExpensasServiceTest {
 
     private final PeriodosEnMemoria periodos = new PeriodosEnMemoria();
     private final Map<UUID, Alicuota> alicuotas = new LinkedHashMap<>();
+    /** "Hoy" es el 22/10/2026. */
+    private final Clock hoy = Clock.fixed(Instant.parse("2026-10-22T15:00:00Z"), ZoneOffset.UTC);
+
     private final EmitirExpensasService servicio =
-            new EmitirExpensasService(periodos, () -> alicuotas, clave -> 10, new CalculadoraExpensas());
+            new EmitirExpensasService(periodos, () -> alicuotas, clave -> 10, new CalculadoraExpensas(), hoy);
+
+    @Test
+    void F3_no_se_emiten_expensas_de_un_mes_pasado() {
+        alicuotas.put(UUID.randomUUID(), Alicuota.de("100"));
+
+        assertThatThrownBy(() -> servicio.emitir("sub-admin", Periodo.de("2026-09"), Dinero.de("500")))
+                .isInstanceOfSatisfying(ReglaNegocioVioladaException.class, e -> assertThat(e.codigo()).isEqualTo("F3"));
+        assertThat(periodos.guardados).isEmpty();
+    }
+
+    @Test
+    void F3_se_puede_emitir_el_mes_actual() {
+        alicuotas.put(UUID.randomUUID(), Alicuota.de("100"));
+
+        assertThat(servicio.emitir("sub-admin", Periodo.de("2026-10"), Dinero.de("500")).periodo())
+                .isEqualTo(Periodo.de("2026-10"));
+    }
 
     @Test
     void F3_emite_una_expensa_por_unidad_activa_y_la_guarda() {

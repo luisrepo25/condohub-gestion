@@ -9,6 +9,8 @@ import com.condohub.gestion.domain.model.PeriodoExpensas;
 import com.condohub.gestion.domain.service.CalculadoraExpensas;
 import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.Periodo;
+import java.time.Clock;
+import java.time.LocalDate;
 import org.springframework.transaction.annotation.Transactional;
 
 public class EmitirExpensasService implements EmitirExpensasUseCase {
@@ -19,16 +21,19 @@ public class EmitirExpensasService implements EmitirExpensasUseCase {
     private final AlicuotaRepository alicuotas;
     private final ParametroRepository parametros;
     private final CalculadoraExpensas calculadora;
+    private final Clock reloj;
 
     public EmitirExpensasService(
             PeriodoExpensasRepository periodos,
             AlicuotaRepository alicuotas,
             ParametroRepository parametros,
-            CalculadoraExpensas calculadora) {
+            CalculadoraExpensas calculadora,
+            Clock reloj) {
         this.periodos = periodos;
         this.alicuotas = alicuotas;
         this.parametros = parametros;
         this.calculadora = calculadora;
+        this.reloj = reloj;
     }
 
     @Override
@@ -37,9 +42,9 @@ public class EmitirExpensasService implements EmitirExpensasUseCase {
         if (periodos.existe(periodo)) {
             throw new ReglaNegocioVioladaException("F3", "Las expensas de " + periodo + " ya fueron emitidas");
         }
-        // TODO(regla): F3 no dice si se puede emitir un periodo pasado (sus expensas nacerían vencidas).
         var emitido = PeriodoExpensas.emitir(
                 periodo,
+                Periodo.delMes(LocalDate.now(reloj)),
                 presupuesto,
                 alicuotas.deUnidadesActivas(),
                 parametros.entero(DIA_VENCIMIENTO),

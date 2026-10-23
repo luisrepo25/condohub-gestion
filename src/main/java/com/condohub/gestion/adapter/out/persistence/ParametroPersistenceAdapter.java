@@ -1,6 +1,7 @@
 package com.condohub.gestion.adapter.out.persistence;
 
 import com.condohub.gestion.application.port.out.ParametroRepository;
+import java.math.BigDecimal;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,10 +16,18 @@ public class ParametroPersistenceAdapter implements ParametroRepository {
 
     @Override
     public int entero(String clave) {
+        return Integer.parseInt(valor(clave));
+    }
+
+    @Override
+    public BigDecimal decimal(String clave) {
+        return new BigDecimal(valor(clave));
+    }
+
+    private String valor(String clave) {
         return jdbc.queryForList("SELECT valor FROM parametro WHERE clave = ?", String.class, clave).stream()
                 .findFirst()
                 .map(String::trim)
-                .map(Integer::parseInt)
                 .orElseThrow(() -> new IllegalStateException("Falta el parámetro " + clave + " en la tabla parametro"));
     }
 }

@@ -1,0 +1,55 @@
+package com.condohub.gestion.application.usecase;
+
+import com.condohub.gestion.application.port.in.ResolverRecargoUseCase;
+import com.condohub.gestion.application.port.out.RecargoRepository;
+import com.condohub.gestion.domain.exception.RecursoNoEncontradoException;
+import com.condohub.gestion.domain.model.RecargoPropuesto;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
+
+public class ResolverRecargoService implements ResolverRecargoUseCase {
+
+    private final RecargoRepository recargos;
+    private final AplicarSaldoAFavor saldoAFavor;
+    private final Clock reloj;
+
+    public ResolverRecargoService(RecargoRepository recargos, AplicarSaldoAFavor saldoAFavor, Clock reloj) {
+        this.recargos = recargos;
+        this.saldoAFavor = saldoAFavor;
+        this.reloj = reloj;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RecargoPropuesto> pendientes() {
+        return recargos.pendientes();
+    }
+
+    @Override
+    @Transactional
+    public RecargoPropuesto confirmar(String adminSub, UUID propuestaId) {
+        var propuesta = buscar(propuestaId);
+        propuesta.confirmar();
+        UUID cargoId = recargos.crearCargoRecargo(propuesta, LocalDate.now(reloj));
+        recargos.marcarConfirmado(propuestaId, adminSub, cargoId);
+        // F7: si la unidad tiene saldo a favor, paga el recargo recién creado.
+        saldoAFavor.aplicar();
+        return recargos.porId(propuestaId);
+    }
+
+    @Override
+    @Transactional
+    public RecargoPropuesto rechazar(String adminSub, UUID propuestaId, String motivo) {
+        var propuesta = buscar(propuestaId);
+        recargos.marcarRechazado(propuestaId, adminSub, propuesta.rechazar(motivo));
+        return recargos.porId(propuestaId);
+    }
+
+    private RecargoPropuesto buscar(UUID propuestaId) {
+        return recargos.porIdParaResolver(propuestaId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el recargo propuesto " + propuestaId));
+    }
+}

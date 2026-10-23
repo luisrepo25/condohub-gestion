@@ -3,6 +3,7 @@ package com.condohub.gestion.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.condohub.gestion.application.port.out.ParametroRepository;
 import com.condohub.gestion.application.port.out.PeriodoExpensasRepository;
 import com.condohub.gestion.application.port.out.SaldoAFavorRepository;
 import com.condohub.gestion.application.usecase.AplicarSaldoAFavor;
@@ -41,7 +42,17 @@ class EmitirExpensasServiceTest {
     private final EmitirExpensasService servicio = new EmitirExpensasService(
             periodos,
             () -> alicuotas,
-            clave -> 10,
+            new ParametroRepository() {
+                @Override
+                public int entero(String clave) {
+                    return 10;
+                }
+
+                @Override
+                public java.math.BigDecimal decimal(String clave) {
+                    throw new UnsupportedOperationException(clave);
+                }
+            },
             new CalculadoraExpensas(),
             hoy,
             new AplicarSaldoAFavor(saldos, new AplicadorSaldoAFavor(new ImputadorPagos())));

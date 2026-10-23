@@ -22,18 +22,21 @@ public class EmitirExpensasService implements EmitirExpensasUseCase {
     private final ParametroRepository parametros;
     private final CalculadoraExpensas calculadora;
     private final Clock reloj;
+    private final AplicarSaldoAFavor saldoAFavor;
 
     public EmitirExpensasService(
             PeriodoExpensasRepository periodos,
             AlicuotaRepository alicuotas,
             ParametroRepository parametros,
             CalculadoraExpensas calculadora,
-            Clock reloj) {
+            Clock reloj,
+            AplicarSaldoAFavor saldoAFavor) {
         this.periodos = periodos;
         this.alicuotas = alicuotas;
         this.parametros = parametros;
         this.calculadora = calculadora;
         this.reloj = reloj;
+        this.saldoAFavor = saldoAFavor;
     }
 
     @Override
@@ -51,6 +54,8 @@ public class EmitirExpensasService implements EmitirExpensasUseCase {
                 adminSub,
                 calculadora);
         periodos.guardar(emitido);
+        // F7: el saldo a favor de cada unidad paga las expensas recién emitidas, en la misma transacción.
+        saldoAFavor.aplicar();
         return emitido;
     }
 }

@@ -4,10 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.condohub.gestion.application.port.out.PeriodoExpensasRepository;
+import com.condohub.gestion.application.port.out.SaldoAFavorRepository;
+import com.condohub.gestion.application.usecase.AplicarSaldoAFavor;
 import com.condohub.gestion.application.usecase.EmitirExpensasService;
 import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
+import com.condohub.gestion.domain.model.CargoPendiente;
+import com.condohub.gestion.domain.model.ImputacionDePago;
 import com.condohub.gestion.domain.model.PeriodoExpensas;
+import com.condohub.gestion.domain.model.SaldoAFavor;
+import com.condohub.gestion.domain.service.AplicadorSaldoAFavor;
 import com.condohub.gestion.domain.service.CalculadoraExpensas;
+import com.condohub.gestion.domain.service.ImputadorPagos;
 import com.condohub.gestion.domain.valueobject.Alicuota;
 import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.Periodo;
@@ -29,8 +36,54 @@ class EmitirExpensasServiceTest {
     /** "Hoy" es el 22/10/2026. */
     private final Clock hoy = Clock.fixed(Instant.parse("2026-10-22T15:00:00Z"), ZoneOffset.UTC);
 
-    private final EmitirExpensasService servicio =
-            new EmitirExpensasService(periodos, () -> alicuotas, clave -> 10, new CalculadoraExpensas(), hoy);
+    private final SaldosEnMemoria saldos = new SaldosEnMemoria();
+
+    private final EmitirExpensasService servicio = new EmitirExpensasService(
+            periodos,
+            () -> alicuotas,
+            clave -> 10,
+            new CalculadoraExpensas(),
+            hoy,
+            new AplicarSaldoAFavor(saldos, new AplicadorSaldoAFavor(new ImputadorPagos())));
+
+    @Test
+    void F7_al_emitir_se_aplica_el_saldo_a_favor_a_la_expensa_nueva() {
+        var unidad = UUID.randomUUID();
+        alicuotas.put(unidad, Alicuota.de("100"));
+        var pagoConSaldo = UUID.randomUUID();
+        saldos.saldos.put(unidad, List.of(new SaldoAFavor(pagoConSaldo, Dinero.de("110"))));
+        saldos.cargos.add(new CargoPendiente(
+                UUID.randomUUID(), Dinero.de("390"), LocalDate.parse("2026-11-10"), Instant.parse("2026-11-01T00:00:00Z")));
+
+        servicio.emitir("sub-admin", Periodo.de("2026-11"), Dinero.de("390"));
+
+        assertThat(saldos.imputadas).singleElement().satisfies(i -> {
+            assertThat(i.pagoId()).isEqualTo(pagoConSaldo);
+            assertThat(i.monto()).isEqualTo(Dinero.de("110"));
+        });
+    }
+
+    private static final class SaldosEnMemoria implements SaldoAFavorRepository {
+
+        final Map<UUID, List<SaldoAFavor>> saldos = new LinkedHashMap<>();
+        final List<CargoPendiente> cargos = new ArrayList<>();
+        final List<ImputacionDePago> imputadas = new ArrayList<>();
+
+        @Override
+        public Map<UUID, List<SaldoAFavor>> saldosAFavorPorUnidad() {
+            return saldos;
+        }
+
+        @Override
+        public List<CargoPendiente> cargosPendientes(UUID unidadId) {
+            return cargos;
+        }
+
+        @Override
+        public void imputar(List<ImputacionDePago> imputaciones) {
+            imputadas.addAll(imputaciones);
+        }
+    }
 
     @Test
     void F3_no_se_emiten_expensas_de_un_mes_pasado() {

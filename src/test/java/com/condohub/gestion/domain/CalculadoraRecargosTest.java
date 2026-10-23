@@ -12,6 +12,7 @@ import com.condohub.gestion.domain.service.CalculadoraRecargos;
 import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.Periodo;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -73,10 +74,19 @@ class CalculadoraRecargosTest {
     void F5_un_recargo_ya_resuelto_no_se_confirma_ni_se_rechaza() {
         var confirmado = recargo(EstadoRecargo.CONFIRMADO);
 
-        assertThatThrownBy(confirmado::confirmar)
+        assertThatThrownBy(() -> confirmado.confirmar(LocalDate.of(2026, 10, 23), 10))
                 .isInstanceOfSatisfying(ReglaNegocioVioladaException.class, e -> assertThat(e.codigo()).isEqualTo("F5"));
         assertThatThrownBy(() -> confirmado.rechazar("x")).isInstanceOf(ReglaNegocioVioladaException.class);
         assertThat(recargo(EstadoRecargo.PROPUESTO).rechazar("  No corresponde  ")).isEqualTo("No corresponde");
+    }
+
+    @Test
+    void F5_el_cargo_de_recargo_vence_el_dia_10_del_mes_siguiente() {
+        var propuesto = recargo(EstadoRecargo.PROPUESTO);
+
+        assertThat(propuesto.confirmar(LocalDate.of(2026, 10, 23), 10)).isEqualTo(LocalDate.of(2026, 11, 10));
+        // En diciembre pasa al año siguiente.
+        assertThat(propuesto.confirmar(LocalDate.of(2026, 12, 2), 10)).isEqualTo(LocalDate.of(2027, 1, 10));
     }
 
     private static RecargoPropuesto recargo(EstadoRecargo estado) {

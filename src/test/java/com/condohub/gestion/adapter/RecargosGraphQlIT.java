@@ -133,9 +133,13 @@ class RecargosGraphQlIT {
                 .andReturn().getResponse().getContentAsString();
         String cargoId = JsonPath.read(confirmado, "$.data.confirmarRecargo.cargoGeneradoId");
 
-        var cargo = jdbc.queryForMap("SELECT tipo::text AS tipo, monto FROM cargo WHERE id = ?::uuid", cargoId);
+        var cargo = jdbc.queryForMap(
+                "SELECT tipo::text AS tipo, monto, fecha_vencimiento FROM cargo WHERE id = ?::uuid", cargoId);
         assertThat(cargo.get("tipo")).isEqualTo("RECARGO");
         assertThat((BigDecimal) cargo.get("monto")).isEqualByComparingTo(monto);
+        // F5: vence el día 10 del mes siguiente a la confirmación.
+        var vence = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusMonths(1).withDayOfMonth(10);
+        assertThat(cargo.get("fecha_vencimiento").toString()).isEqualTo(vence.toString());
 
         graphql(token(ADMIN, "ADMIN"), "mutation { confirmarRecargo(propuestaId: \"" + propuestaId + "\") { estado } }")
                 .andExpect(jsonPath("$.errors[0].extensions.code").value("F5"));

@@ -1,6 +1,7 @@
 package com.condohub.gestion.application.usecase;
 
 import com.condohub.gestion.application.port.in.ResolverRecargoUseCase;
+import com.condohub.gestion.application.port.out.ParametroRepository;
 import com.condohub.gestion.application.port.out.RecargoRepository;
 import com.condohub.gestion.domain.exception.RecursoNoEncontradoException;
 import com.condohub.gestion.domain.model.RecargoPropuesto;
@@ -12,12 +13,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 public class ResolverRecargoService implements ResolverRecargoUseCase {
 
+    static final String DIA_VENCIMIENTO = "expensas.dia_vencimiento";
+
     private final RecargoRepository recargos;
+    private final ParametroRepository parametros;
     private final AplicarSaldoAFavor saldoAFavor;
     private final Clock reloj;
 
-    public ResolverRecargoService(RecargoRepository recargos, AplicarSaldoAFavor saldoAFavor, Clock reloj) {
+    public ResolverRecargoService(
+            RecargoRepository recargos, ParametroRepository parametros, AplicarSaldoAFavor saldoAFavor, Clock reloj) {
         this.recargos = recargos;
+        this.parametros = parametros;
         this.saldoAFavor = saldoAFavor;
         this.reloj = reloj;
     }
@@ -32,8 +38,9 @@ public class ResolverRecargoService implements ResolverRecargoUseCase {
     @Transactional
     public RecargoPropuesto confirmar(String adminSub, UUID propuestaId) {
         var propuesta = buscar(propuestaId);
-        propuesta.confirmar();
-        UUID cargoId = recargos.crearCargoRecargo(propuesta, LocalDate.now(reloj));
+        LocalDate hoy = LocalDate.now(reloj);
+        LocalDate vence = propuesta.confirmar(hoy, parametros.entero(DIA_VENCIMIENTO));
+        UUID cargoId = recargos.crearCargoRecargo(propuesta, hoy, vence);
         recargos.marcarConfirmado(propuestaId, adminSub, cargoId);
         // F7: si la unidad tiene saldo a favor, paga el recargo recién creado.
         saldoAFavor.aplicar();

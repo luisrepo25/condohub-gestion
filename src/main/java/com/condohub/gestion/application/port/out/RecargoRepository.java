@@ -36,8 +36,8 @@ public interface RecargoRepository {
     /** La propuesta, bloqueada hasta el fin de la transacción. */
     Optional<RecargoPropuesto> porIdParaResolver(UUID propuestaId);
 
-    /** Crea el cargo RECARGO de la propuesta y devuelve su id. */
-    UUID crearCargoRecargo(RecargoPropuesto propuesta, LocalDate hoy);
+    /** Crea el cargo RECARGO de la propuesta, emitido {@code hoy} y con vencimiento {@code vence}; devuelve su id. */
+    UUID crearCargoRecargo(RecargoPropuesto propuesta, LocalDate hoy, LocalDate vence);
 
     void marcarConfirmado(UUID propuestaId, String adminSub, UUID cargoId);
 

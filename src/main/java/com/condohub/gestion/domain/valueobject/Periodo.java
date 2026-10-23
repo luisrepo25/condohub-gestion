@@ -27,6 +27,11 @@ public record Periodo(YearMonth mes) {
         return new Periodo(YearMonth.from(fecha));
     }
 
+    /** El mes que sigue a este. */
+    public Periodo siguiente() {
+        return new Periodo(mes.plusMonths(1));
+    }
+
     public boolean esAnteriorA(Periodo otro) {
         return mes.isBefore(otro.mes);
     }

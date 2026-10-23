@@ -110,8 +110,7 @@ public class RecargoPersistenceAdapter implements RecargoRepository {
     }
 
     @Override
-    public UUID crearCargoRecargo(RecargoPropuesto p, LocalDate hoy) {
-        // TODO(regla): F5 no fija el vencimiento del recargo; hoy vence el mismo día en que se confirma.
+    public UUID crearCargoRecargo(RecargoPropuesto p, LocalDate hoy, LocalDate vence) {
         return jdbc.queryForObject(
                 """
                 INSERT INTO cargo (unidad_id, tipo, concepto, monto, saldo, fecha_emision, fecha_vencimiento,
@@ -128,7 +127,7 @@ public class RecargoPersistenceAdapter implements RecargoRepository {
                 p.monto().monto(),
                 p.monto().monto(),
                 hoy,
-                hoy,
+                vence,
                 p.cargoOrigenId());
     }
 

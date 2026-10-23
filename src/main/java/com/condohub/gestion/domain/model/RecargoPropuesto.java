@@ -4,6 +4,7 @@ import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.Periodo;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -25,9 +26,16 @@ public record RecargoPropuesto(
 
     public static final int MOTIVO_LARGO_MAXIMO = 300;
 
-    /** F5: solo un recargo propuesto se confirma. */
-    public void confirmar() {
+    /**
+     * F5: solo un recargo propuesto se confirma. El cargo que se crea vence como una expensa: el día de vencimiento
+     * (F4) del mes siguiente a la confirmación.
+     *
+     * @param diaVencimiento parámetro {@code expensas.dia_vencimiento}
+     * @return fecha de vencimiento del cargo de recargo
+     */
+    public LocalDate confirmar(LocalDate hoy, int diaVencimiento) {
         exigirPropuesto();
+        return Periodo.delMes(hoy).siguiente().fechaVencimiento(diaVencimiento);
     }
 
     /**

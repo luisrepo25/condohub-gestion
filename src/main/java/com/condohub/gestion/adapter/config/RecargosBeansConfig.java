@@ -28,7 +28,8 @@ class RecargosBeansConfig {
     }
 
     @Bean
-    ResolverRecargoUseCase resolverRecargo(RecargoRepository recargos, AplicarSaldoAFavor saldoAFavor, Clock reloj) {
-        return new ResolverRecargoService(recargos, saldoAFavor, reloj);
+    ResolverRecargoUseCase resolverRecargo(
+            RecargoRepository recargos, ParametroRepository parametros, AplicarSaldoAFavor saldoAFavor, Clock reloj) {
+        return new ResolverRecargoService(recargos, parametros, saldoAFavor, reloj);
     }
 }

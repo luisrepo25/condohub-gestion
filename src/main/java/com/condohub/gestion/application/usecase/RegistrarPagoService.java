@@ -12,6 +12,7 @@ import com.condohub.gestion.domain.model.Solicitante;
 import com.condohub.gestion.domain.service.PoliticaVisibilidad;
 import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.IdempotencyKey;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -25,11 +26,14 @@ public class RegistrarPagoService implements RegistrarPagoUseCase {
     private final RegistroPagoRepository pagos;
     private final UnidadRepository unidades;
     private final PoliticaVisibilidad politica;
+    private final Clock reloj;
 
-    public RegistrarPagoService(RegistroPagoRepository pagos, UnidadRepository unidades, PoliticaVisibilidad politica) {
+    public RegistrarPagoService(
+            RegistroPagoRepository pagos, UnidadRepository unidades, PoliticaVisibilidad politica, Clock reloj) {
         this.pagos = pagos;
         this.unidades = unidades;
         this.politica = politica;
+        this.reloj = reloj;
     }
 
     @Override
@@ -51,10 +55,12 @@ public class RegistrarPagoService implements RegistrarPagoUseCase {
         if (!pagos.existeUnidad(comando.unidadId())) {
             throw new RecursoNoEncontradoException("No existe la unidad " + comando.unidadId());
         }
+        var fechaPago = fecha(comando.fechaPago());
+        RegistroDePago.exigirFechaNoFutura(fechaPago, LocalDate.now(reloj));
         var registro = new RegistroDePago(
                 comando.unidadId(),
                 Dinero.de(comando.monto()),
-                fecha(comando.fechaPago()),
+                fechaPago,
                 comando.banco(),
                 clave,
                 solicitante.sub(),

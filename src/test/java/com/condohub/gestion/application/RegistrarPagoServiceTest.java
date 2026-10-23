@@ -16,7 +16,9 @@ import com.condohub.gestion.domain.model.Solicitante;
 import com.condohub.gestion.domain.service.PoliticaVisibilidad;
 import com.condohub.gestion.domain.valueobject.IdempotencyKey;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +31,29 @@ class RegistrarPagoServiceTest {
     private final UUID miUnidad = UUID.randomUUID();
     private final UUID otraUnidad = UUID.randomUUID();
     private final PagosEnMemoria pagos = new PagosEnMemoria(Set.of(miUnidad, otraUnidad));
+    /** "Hoy" es el 22/10/2026. */
+    private final Clock hoy = Clock.fixed(Instant.parse("2026-10-22T15:00:00Z"), ZoneOffset.UTC);
+
     private final RegistrarPagoService servicio =
-            new RegistrarPagoService(pagos, sub -> Set.of(miUnidad), new PoliticaVisibilidad());
+            new RegistrarPagoService(pagos, sub -> Set.of(miUnidad), new PoliticaVisibilidad(), hoy);
+
+    @Test
+    void F8_un_comprobante_con_fecha_futura_se_rechaza() {
+        var futuro = new Comando(
+                miUnidad, new BigDecimal("390.00"), "2026-10-23", "Banco Unión", UUID.randomUUID().toString(), null);
+
+        assertThatThrownBy(() -> servicio.registrar(residente, futuro))
+                .isInstanceOfSatisfying(ReglaNegocioVioladaException.class, e -> assertThat(e.codigo()).isEqualTo("F8"));
+        assertThat(pagos.guardados).isEmpty();
+    }
+
+    @Test
+    void F8_un_comprobante_de_hoy_se_acepta() {
+        var deHoy = new Comando(
+                miUnidad, new BigDecimal("390.00"), "2026-10-22", "Banco Unión", UUID.randomUUID().toString(), null);
+
+        assertThat(servicio.registrar(residente, deHoy).fechaPago()).isEqualTo(java.time.LocalDate.parse("2026-10-22"));
+    }
 
     private final Solicitante residente = new Solicitante("sub-res", Set.of(Rol.RESIDENTE));
     private final Solicitante admin = new Solicitante("sub-admin", Set.of(Rol.ADMIN));

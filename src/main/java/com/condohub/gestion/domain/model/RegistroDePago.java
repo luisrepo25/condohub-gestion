@@ -37,7 +37,14 @@ public record RegistroDePago(
             throw new ReglaNegocioVioladaException(
                     "F8", "El banco admite como máximo " + BANCO_LARGO_MAXIMO + " caracteres");
         }
-        // TODO(regla): F8/F9 no dicen si se acepta un comprobante con fecha futura; hoy se acepta.
+    }
+
+    /** F8: la fecha del comprobante no puede ser futura. */
+    public static void exigirFechaNoFutura(LocalDate fechaPago, LocalDate hoy) {
+        if (fechaPago.isAfter(hoy)) {
+            throw new ReglaNegocioVioladaException(
+                    "F8", "La fecha del comprobante (" + fechaPago + ") no puede ser futura");
+        }
     }
 
     /** F8, F9: el pago registrado queda pendiente de conciliación. */

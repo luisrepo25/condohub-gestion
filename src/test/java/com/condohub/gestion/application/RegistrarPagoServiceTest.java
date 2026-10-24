@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.condohub.gestion.application.port.in.RegistrarPagoUseCase.Comando;
 import com.condohub.gestion.application.port.out.RegistroPagoRepository;
 import com.condohub.gestion.application.usecase.RegistrarPagoService;
+import com.condohub.gestion.domain.event.EventoFinanzas;
+import com.condohub.gestion.domain.event.PagoRegistrado;
 import com.condohub.gestion.domain.exception.RecursoNoEncontradoException;
 import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import com.condohub.gestion.domain.model.EstadoPago;
@@ -14,6 +16,7 @@ import com.condohub.gestion.domain.model.RegistroDePago;
 import com.condohub.gestion.domain.model.Rol;
 import com.condohub.gestion.domain.model.Solicitante;
 import com.condohub.gestion.domain.service.PoliticaVisibilidad;
+import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.IdempotencyKey;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -34,8 +37,40 @@ class RegistrarPagoServiceTest {
     /** "Hoy" es el 22/10/2026. */
     private final Clock hoy = Clock.fixed(Instant.parse("2026-10-22T15:00:00Z"), ZoneOffset.UTC);
 
+    private final List<EventoFinanzas> eventos = new ArrayList<>();
+
     private final RegistrarPagoService servicio =
-            new RegistrarPagoService(pagos, sub -> Set.of(miUnidad), new PoliticaVisibilidad(), hoy);
+            new RegistrarPagoService(pagos, sub -> Set.of(miUnidad), new PoliticaVisibilidad(), hoy, eventos::add);
+
+    @Test
+    void S4_registrar_un_pago_publica_PagoRegistrado_con_sus_datos() {
+        var pago = servicio.registrar(residente, comando(miUnidad, "390.00", UUID.randomUUID().toString()));
+
+        assertThat(eventos).singleElement().isInstanceOfSatisfying(PagoRegistrado.class, e -> {
+            assertThat(e.pagoId()).isEqualTo(pago.id());
+            assertThat(e.unidadId()).isEqualTo(miUnidad);
+            assertThat(e.monto()).isEqualTo(Dinero.de("390.00"));
+            assertThat(e.banco()).isEqualTo("Banco Unión");
+        });
+    }
+
+    @Test
+    void S4_O3_reenviar_la_misma_clave_no_publica_otro_evento() {
+        var clave = UUID.randomUUID().toString();
+
+        servicio.registrar(residente, comando(miUnidad, "390.00", clave));
+        servicio.registrar(residente, comando(miUnidad, "390.00", clave));
+
+        assertThat(eventos).hasSize(1);
+    }
+
+    @Test
+    void S4_un_pago_rechazado_por_una_regla_no_publica_nada() {
+        assertThatThrownBy(() -> servicio.registrar(residente, comando(otraUnidad, "390.00", UUID.randomUUID().toString())))
+                .isInstanceOf(ReglaNegocioVioladaException.class);
+
+        assertThat(eventos).isEmpty();
+    }
 
     @Test
     void F8_un_comprobante_con_fecha_futura_se_rechaza() {

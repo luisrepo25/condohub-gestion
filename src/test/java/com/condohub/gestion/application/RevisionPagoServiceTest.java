@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.condohub.gestion.application.port.out.RevisionPagoRepository;
 import com.condohub.gestion.application.usecase.ConfirmarPagoService;
 import com.condohub.gestion.application.usecase.RechazarPagoService;
+import com.condohub.gestion.domain.event.EventoFinanzas;
+import com.condohub.gestion.domain.event.PagoConfirmado;
 import com.condohub.gestion.domain.exception.RecursoNoEncontradoException;
 import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import com.condohub.gestion.domain.model.CargoPendiente;
@@ -29,8 +31,32 @@ class RevisionPagoServiceTest {
 
     private final UUID unidad = UUID.randomUUID();
     private final PagosEnRevision repo = new PagosEnRevision();
-    private final ConfirmarPagoService confirmar = new ConfirmarPagoService(repo, new ImputadorPagos());
+    private final List<EventoFinanzas> eventos = new ArrayList<>();
+    private final ConfirmarPagoService confirmar = new ConfirmarPagoService(repo, new ImputadorPagos(), eventos::add);
     private final RechazarPagoService rechazar = new RechazarPagoService(repo);
+
+    @Test
+    void S4_confirmar_publica_PagoConfirmado_con_el_numero_de_recibo() {
+        var pagoId = repo.nuevoPago("390.00");
+
+        confirmar.confirmar("sub-admin", pagoId);
+
+        assertThat(eventos).singleElement().isInstanceOfSatisfying(PagoConfirmado.class, e -> {
+            assertThat(e.pagoId()).isEqualTo(pagoId);
+            assertThat(e.unidadId()).isEqualTo(unidad);
+            assertThat(e.monto()).isEqualTo(Dinero.de("390.00"));
+            assertThat(e.reciboNumero()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void S4_rechazar_o_fallar_al_confirmar_no_publica_nada() {
+        var pagoId = repo.nuevoPago("100.00");
+        rechazar.rechazar("sub-admin", pagoId, "No figura en el extracto");
+
+        assertThatThrownBy(() -> confirmar.confirmar("sub-admin", pagoId)).isInstanceOf(ReglaNegocioVioladaException.class);
+        assertThat(eventos).isEmpty();
+    }
 
     @Test
     void F7_F8_confirmar_imputa_emite_recibo_y_devuelve_el_saldo_a_favor() {

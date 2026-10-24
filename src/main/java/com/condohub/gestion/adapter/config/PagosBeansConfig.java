@@ -1,6 +1,7 @@
 package com.condohub.gestion.adapter.config;
 
 import com.condohub.gestion.application.port.in.RegistrarPagoUseCase;
+import com.condohub.gestion.application.port.out.EventPublisher;
 import com.condohub.gestion.application.port.out.RegistroPagoRepository;
 import com.condohub.gestion.application.port.out.UnidadRepository;
 import com.condohub.gestion.application.usecase.RegistrarPagoService;
@@ -15,7 +16,11 @@ class PagosBeansConfig {
 
     @Bean
     RegistrarPagoUseCase registrarPago(
-            RegistroPagoRepository pagos, UnidadRepository unidades, PoliticaVisibilidad politica, Clock reloj) {
-        return new RegistrarPagoService(pagos, unidades, politica, reloj);
+            RegistroPagoRepository pagos,
+            UnidadRepository unidades,
+            PoliticaVisibilidad politica,
+            Clock reloj,
+            EventPublisher eventos) {
+        return new RegistrarPagoService(pagos, unidades, politica, reloj, eventos);
     }
 }

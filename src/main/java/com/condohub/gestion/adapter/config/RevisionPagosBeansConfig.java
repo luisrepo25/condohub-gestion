@@ -2,6 +2,7 @@ package com.condohub.gestion.adapter.config;
 
 import com.condohub.gestion.application.port.in.ConfirmarPagoUseCase;
 import com.condohub.gestion.application.port.in.RechazarPagoUseCase;
+import com.condohub.gestion.application.port.out.EventPublisher;
 import com.condohub.gestion.application.port.out.RevisionPagoRepository;
 import com.condohub.gestion.application.usecase.ConfirmarPagoService;
 import com.condohub.gestion.application.usecase.RechazarPagoService;
@@ -19,8 +20,9 @@ class RevisionPagosBeansConfig {
     }
 
     @Bean
-    ConfirmarPagoUseCase confirmarPago(RevisionPagoRepository pagos, ImputadorPagos imputador) {
-        return new ConfirmarPagoService(pagos, imputador);
+    ConfirmarPagoUseCase confirmarPago(
+            RevisionPagoRepository pagos, ImputadorPagos imputador, EventPublisher eventos) {
+        return new ConfirmarPagoService(pagos, imputador, eventos);
     }
 
     @Bean

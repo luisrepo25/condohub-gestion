@@ -1,8 +1,10 @@
 package com.condohub.gestion.application.usecase;
 
 import com.condohub.gestion.application.port.in.RegistrarPagoUseCase;
+import com.condohub.gestion.application.port.out.EventPublisher;
 import com.condohub.gestion.application.port.out.RegistroPagoRepository;
 import com.condohub.gestion.application.port.out.UnidadRepository;
+import com.condohub.gestion.domain.event.PagoRegistrado;
 import com.condohub.gestion.domain.exception.RecursoNoEncontradoException;
 import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import com.condohub.gestion.domain.model.Pago;
@@ -27,13 +29,19 @@ public class RegistrarPagoService implements RegistrarPagoUseCase {
     private final UnidadRepository unidades;
     private final PoliticaVisibilidad politica;
     private final Clock reloj;
+    private final EventPublisher eventos;
 
     public RegistrarPagoService(
-            RegistroPagoRepository pagos, UnidadRepository unidades, PoliticaVisibilidad politica, Clock reloj) {
+            RegistroPagoRepository pagos,
+            UnidadRepository unidades,
+            PoliticaVisibilidad politica,
+            Clock reloj,
+            EventPublisher eventos) {
         this.pagos = pagos;
         this.unidades = unidades;
         this.politica = politica;
         this.reloj = reloj;
+        this.eventos = eventos;
     }
 
     @Override
@@ -65,7 +73,11 @@ public class RegistrarPagoService implements RegistrarPagoUseCase {
                 clave,
                 solicitante.sub(),
                 horaDispositivo(comando.horaDispositivo()));
-        return pagos.guardar(registro);
+        var pago = pagos.guardar(registro);
+        // S4: el evento queda en el outbox en la misma transacción. Su eventId sale del pago, así un registro
+        // concurrente con la misma clave no lo duplica (S5).
+        eventos.publicar(new PagoRegistrado(pago.id(), pago.unidadId(), pago.monto(), pago.fechaPago(), registro.banco()));
+        return pago;
     }
 
     private static LocalDate fecha(String valor) {

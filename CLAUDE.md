@@ -96,7 +96,7 @@ Hecho: `salud` (cualquier rol), `estadoDeCuenta(unidadId)` (ADMIN todas; RESIDEN
 - JWT de Keycloak: `adapter/config/SeguridadConfig.java` (`realm_access.roles` → `ROLE_*`; 401 en problem+json). Rol por resolver con `@PreAuthorize`; la regla por dato (F1) vive en `domain/service/PoliticaVisibilidad`. El vínculo token → unidad es `persona.keycloak_sub`.
 - Errores GraphQL: `extensions.code` = regla (`F1`), `FORBIDDEN` o `NOT_FOUND` (`GraphQlErrorResolver`).
 - Correr: `mvn spring-boot:run -Dspring-boot.run.profiles=dev` (el perfil `dev` carga las 200 unidades). `mvn test`: 24 pruebas unitarias; `mvn verify`: además 16 de integración con Testcontainers (necesita Docker). Imagen: `Dockerfile` multi-stage; CI en `.github/workflows/ci.yml`. Aún no hay `mvnw` ni spotless.
-- Variables: `GESTION_DB_URL`, `GESTION_DB_USER`, `GESTION_DB_PASSWORD`, `KEYCLOAK_ISSUER`, `KEYCLOAK_JWKS`. Con el 5432 ocupado: compose con `POSTGRES_PORT=5433` y `GESTION_DB_URL=jdbc:postgresql://localhost:5433/gestion`.
+- Variables: `GESTION_DB_URL`, `GESTION_DB_USER`, `GESTION_DB_PASSWORD`, `KEYCLOAK_ISSUER`, `KEYCLOAK_JWKS`; outbox (S4): `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD` (por defecto `localhost:5672`, `condohub`/`condohub`), `OUTBOX_INTERVALO_MS` (2000) y `OUTBOX_RELAY_HABILITADO` (`true`; los tests lo apagan en `src/test/resources/application.properties`, salvo `OutboxRabbitIT`). Con el 5432 ocupado: compose con `POSTGRES_PORT=5433` y `GESTION_DB_URL=jdbc:postgresql://localhost:5433/gestion`.
 - Por el gateway: `POST http://localhost:8080/gestion/graphql` con `Authorization: Bearer <token>`.
 
 ## Código funcional protegido (obligatorio)

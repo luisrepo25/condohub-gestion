@@ -17,6 +17,12 @@ spring:
   graphql:
     schema:
       file-extensions: .graphql,.graphqls
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:condohub}
+    password: ${RABBITMQ_PASSWORD:condohub}
+    publisher-confirm-type: simple    # S4: el outbox marca un evento publicado solo con la confirmación del broker
   security:
     oauth2:
       resourceserver:
@@ -24,3 +30,10 @@ spring:
           # Las claves se piden al JWKS; el iss del token debe ser exactamente el issuer.
           issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8180/realms/condohub}
           jwk-set-uri: ${KEYCLOAK_JWKS:http://localhost:8180/realms/condohub/protocol/openid-connect/certs}
+
+condohub:
+  outbox:
+    exchange: condohub.events
+    intervalo-ms: ${OUTBOX_INTERVALO_MS:2000}
+    relay:
+      habilitado: ${OUTBOX_RELAY_HABILITADO:true}

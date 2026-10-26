@@ -15,4 +15,9 @@ public record PagoConfirmado(UUID pagoId, UUID unidadId, Dinero monto, long reci
     public UUID agregadoId() {
         return pagoId;
     }
+
+    @Override
+    public String tipoAgregado() {
+        return "Pago";
+    }
 }

@@ -17,4 +17,9 @@ public record PagoRegistrado(UUID pagoId, UUID unidadId, Dinero monto, LocalDate
     public UUID agregadoId() {
         return pagoId;
     }
+
+    @Override
+    public String tipoAgregado() {
+        return "Pago";
+    }
 }

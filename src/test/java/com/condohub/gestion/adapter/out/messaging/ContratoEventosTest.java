@@ -52,6 +52,16 @@ class ContratoEventosTest {
                 .isNotEqualTo(SobreEvento.eventId(new PagoConfirmado(pagoId, unidadId, Dinero.de("1"), 1)));
     }
 
+    @Test
+    void S4_cada_evento_indica_el_agregado_que_lo_produjo() {
+        var registrado = new PagoRegistrado(pagoId, unidadId, Dinero.de("1"), LocalDate.now(), null);
+        var confirmado = new PagoConfirmado(pagoId, unidadId, Dinero.de("1"), 1);
+
+        assertThat(registrado.tipoAgregado()).isEqualTo("Pago");
+        assertThat(confirmado.tipoAgregado()).isEqualTo("Pago");
+        assertThat(confirmado.agregadoId()).isEqualTo(pagoId);
+    }
+
     private void validar(EventoFinanzas evento) throws Exception {
         assumeTrue(Files.isDirectory(CONTRATOS), "sin contracts/events: prueba de contrato omitida");
         String mensaje = SobreEvento.sobre(

@@ -27,7 +27,7 @@ public class OutboxEventPublisher implements EventPublisher {
                 ON CONFLICT (id) DO NOTHING
                 """,
                 SobreEvento.eventId(evento),
-                "Pago",
+                evento.tipoAgregado(),
                 evento.agregadoId().toString(),
                 SobreEvento.nombre(evento),
                 evento.tipo(),

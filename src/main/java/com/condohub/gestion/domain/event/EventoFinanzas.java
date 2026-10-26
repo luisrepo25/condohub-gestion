@@ -10,4 +10,7 @@ public sealed interface EventoFinanzas permits PagoRegistrado, PagoConfirmado {
 
     /** Id del agregado que lo produjo. */
     UUID agregadoId();
+
+    /** Nombre del agregado que lo produjo (columna {@code aggregate_type} del outbox): {@code Pago}, {@code Cargo}... */
+    String tipoAgregado();
 }

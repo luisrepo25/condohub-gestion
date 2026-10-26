@@ -48,6 +48,23 @@ public class SaldoAFavorPersistenceAdapter implements SaldoAFavorRepository {
     }
 
     @Override
+    public List<SaldoAFavor> saldosAFavorDe(UUID unidadId) {
+        return jdbc.query(
+                """
+                SELECT pg.id, pg.monto - COALESCE(i.imputado, 0) AS disponible
+                  FROM pago pg
+                  LEFT JOIN (SELECT pago_id, SUM(monto) AS imputado FROM imputacion_pago GROUP BY pago_id) i
+                         ON i.pago_id = pg.id
+                 WHERE pg.unidad_id = ? AND pg.estado = 'CONFIRMADO' AND pg.monto - COALESCE(i.imputado, 0) > 0
+                 ORDER BY pg.revisado_en, pg.registrado_en
+                   FOR UPDATE OF pg
+                """,
+                (rs, i) -> new SaldoAFavor(
+                        rs.getObject("id", UUID.class), Dinero.de(rs.getObject("disponible", BigDecimal.class))),
+                unidadId);
+    }
+
+    @Override
     public List<CargoPendiente> cargosPendientes(UUID unidadId) {
         return jdbc.query(
                 """

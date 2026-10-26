@@ -43,8 +43,8 @@ public class ResolverRecargoService implements ResolverRecargoUseCase {
                 hoy, parametros.entero(DIA_VENCIMIENTO), recargos.saldoPendienteDelCargo(propuesta.cargoOrigenId()));
         UUID cargoId = recargos.crearCargoRecargo(propuesta, hoy, vence);
         recargos.marcarConfirmado(propuestaId, adminSub, cargoId);
-        // F7: si la unidad tiene saldo a favor, paga el recargo recién creado.
-        saldoAFavor.aplicar();
+        // F7: si la unidad tiene saldo a favor, paga el recargo recién creado. Solo cambió esa unidad.
+        saldoAFavor.aplicar(propuesta.unidadId());
         return recargos.porId(propuestaId);
     }
 

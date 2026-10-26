@@ -39,6 +39,28 @@ public record RecargoPropuesto(
     }
 
     /**
+     * F5: como {@link #confirmar(LocalDate, int)}, y además exige que el cargo de origen siga debiendo lo mismo que al
+     * proponerlo: el recargo se calculó sobre ese saldo vencido. Si desde entonces se pagó, total o en parte, ya no
+     * corresponde: el ADMIN lo rechaza y el mes siguiente se propone sobre el saldo que quede.
+     *
+     * @param saldoActualDelOrigen saldo pendiente hoy del cargo de origen ({@link Dinero#CERO} si ya está pagado)
+     */
+    public LocalDate confirmar(LocalDate hoy, int diaVencimiento, Dinero saldoActualDelOrigen) {
+        exigirPropuesto();
+        if (saldoActualDelOrigen.equals(Dinero.CERO)) {
+            throw new ReglaNegocioVioladaException(
+                    "F5", "El cargo de origen ya fue pagado: no hay saldo vencido, rechaza este recargo");
+        }
+        if (!saldoActualDelOrigen.equals(base)) {
+            throw new ReglaNegocioVioladaException(
+                    "F5",
+                    "El saldo del cargo de origen cambió desde la propuesta (era " + base + ", hoy " + saldoActualDelOrigen
+                            + "): rechaza este recargo; el mes siguiente se propone sobre el saldo actual");
+        }
+        return confirmar(hoy, diaVencimiento);
+    }
+
+    /**
      * F5: el ADMIN rechaza el recargo; no se cobra.
      *
      * @return el motivo normalizado (puede ser {@code null})

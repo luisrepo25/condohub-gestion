@@ -39,7 +39,8 @@ public class ResolverRecargoService implements ResolverRecargoUseCase {
     public RecargoPropuesto confirmar(String adminSub, UUID propuestaId) {
         var propuesta = buscar(propuestaId);
         LocalDate hoy = LocalDate.now(reloj);
-        LocalDate vence = propuesta.confirmar(hoy, parametros.entero(DIA_VENCIMIENTO));
+        LocalDate vence = propuesta.confirmar(
+                hoy, parametros.entero(DIA_VENCIMIENTO), recargos.saldoPendienteDelCargo(propuesta.cargoOrigenId()));
         UUID cargoId = recargos.crearCargoRecargo(propuesta, hoy, vence);
         recargos.marcarConfirmado(propuestaId, adminSub, cargoId);
         // F7: si la unidad tiene saldo a favor, paga el recargo recién creado.

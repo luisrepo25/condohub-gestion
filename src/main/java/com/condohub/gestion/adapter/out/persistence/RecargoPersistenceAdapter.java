@@ -110,6 +110,18 @@ public class RecargoPersistenceAdapter implements RecargoRepository {
     }
 
     @Override
+    public Dinero saldoPendienteDelCargo(UUID cargoId) {
+        // FOR UPDATE: un pago que se confirme a la vez espera a que termine esta transacción (y al revés).
+        return jdbc.query(
+                        "SELECT saldo FROM cargo WHERE id = ? AND estado = 'PENDIENTE' FOR UPDATE",
+                        (rs, i) -> Dinero.de(rs.getObject("saldo", BigDecimal.class)),
+                        cargoId)
+                .stream()
+                .findFirst()
+                .orElse(Dinero.CERO);
+    }
+
+    @Override
     public UUID crearCargoRecargo(RecargoPropuesto p, LocalDate hoy, LocalDate vence) {
         return jdbc.queryForObject(
                 """

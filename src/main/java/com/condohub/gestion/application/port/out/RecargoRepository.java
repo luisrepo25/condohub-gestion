@@ -3,6 +3,7 @@ package com.condohub.gestion.application.port.out;
 import com.condohub.gestion.domain.model.CargoVencido;
 import com.condohub.gestion.domain.model.RecargoCalculado;
 import com.condohub.gestion.domain.model.RecargoPropuesto;
+import com.condohub.gestion.domain.valueobject.Dinero;
 import com.condohub.gestion.domain.valueobject.Periodo;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +36,9 @@ public interface RecargoRepository {
 
     /** La propuesta, bloqueada hasta el fin de la transacción. */
     Optional<RecargoPropuesto> porIdParaResolver(UUID propuestaId);
+
+    /** Saldo pendiente del cargo, bloqueado hasta el fin de la transacción; {@code Dinero.CERO} si ya no está PENDIENTE. */
+    Dinero saldoPendienteDelCargo(UUID cargoId);
 
     /** Crea el cargo RECARGO de la propuesta, emitido {@code hoy} y con vencimiento {@code vence}; devuelve su id. */
     UUID crearCargoRecargo(RecargoPropuesto propuesta, LocalDate hoy, LocalDate vence);

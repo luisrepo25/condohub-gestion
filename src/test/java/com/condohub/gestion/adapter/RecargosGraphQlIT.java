@@ -146,6 +146,36 @@ class RecargosGraphQlIT {
     }
 
     @Test
+    void F5_no_se_confirma_un_recargo_si_el_cargo_se_pago_despues_de_proponerlo() throws Exception {
+        var unidad = unidadMorosa(4);
+        var respuesta = graphql(token(ADMIN, "ADMIN"),
+                        "mutation { proponerRecargo(unidadId: \"" + unidad + "\") " + CAMPOS + " }")
+                .andReturn().getResponse().getContentAsString();
+        String propuestaId = JsonPath.read(respuesta, "$.data.proponerRecargo[0].id");
+
+        // El residente paga toda su deuda antes de que el ADMIN confirme el recargo.
+        var deuda = jdbc.queryForObject(
+                "SELECT sum(saldo) FROM cargo WHERE unidad_id = ?::uuid AND estado = 'PENDIENTE'", BigDecimal.class, unidad);
+        var pago = graphql(token(ADMIN, "ADMIN"),
+                        "mutation { registrarPago(unidadId: \"" + unidad + "\", monto: \"" + deuda.toPlainString()
+                                + "\", fechaPago: \"" + java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+                                + "\", idempotencyKey: \"" + java.util.UUID.randomUUID() + "\") { id } }")
+                .andReturn().getResponse().getContentAsString();
+        String pagoId = JsonPath.read(pago, "$.data.registrarPago.id");
+        graphql(token(ADMIN, "ADMIN"), "mutation { confirmarPago(pagoId: \"" + pagoId + "\") { reciboNumero } }")
+                .andExpect(jsonPath("$.errors").doesNotExist());
+
+        graphql(token(ADMIN, "ADMIN"), "mutation { confirmarRecargo(propuestaId: \"" + propuestaId + "\") { estado } }")
+                .andExpect(jsonPath("$.errors[0].extensions.code").value("F5"))
+                .andExpect(jsonPath("$.errors[0].message").value(org.hamcrest.Matchers.containsString("ya fue pagado")));
+        assertThat(cargosRecargo(unidad)).isZero();
+
+        // Queda PROPUESTO para que el ADMIN lo rechace.
+        graphql(token(ADMIN, "ADMIN"), "mutation { rechazarRecargo(propuestaId: \"" + propuestaId + "\") { estado } }")
+                .andExpect(jsonPath("$.data.rechazarRecargo.estado").value("RECHAZADO"));
+    }
+
+    @Test
     void F5_rechazar_no_cobra_y_guarda_el_motivo() throws Exception {
         var unidad = unidadMorosa(3);
         var respuesta = graphql(token(ADMIN, "ADMIN"),

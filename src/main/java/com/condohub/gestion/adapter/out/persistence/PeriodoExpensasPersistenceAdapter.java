@@ -1,6 +1,7 @@
 package com.condohub.gestion.adapter.out.persistence;
 
 import com.condohub.gestion.application.port.out.PeriodoExpensasRepository;
+import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import com.condohub.gestion.domain.model.PeriodoExpensas;
 import com.condohub.gestion.domain.valueobject.Periodo;
 import java.time.format.DateTimeFormatter;
@@ -30,17 +31,25 @@ public class PeriodoExpensasPersistenceAdapter implements PeriodoExpensasReposit
 
     @Override
     public void guardar(PeriodoExpensas p) {
-        UUID periodoId = jdbc.queryForObject(
-                """
-                INSERT INTO periodo_expensas (periodo, presupuesto, estado, fecha_vencimiento, emitido_por, emitido_en)
-                VALUES (?, ?, 'EMITIDO', ?, ?, now())
-                RETURNING id
-                """,
-                UUID.class,
-                p.periodo().primerDia(),
-                p.presupuesto().monto(),
-                p.fechaVencimiento(),
-                p.emitidoPor());
+        // F3: si otra emisión del mismo periodo ganó la carrera entre existe() y este INSERT, la restricción UNIQUE la
+        // frena; ON CONFLICT lo convierte en la regla F3 en vez de un error de base de datos.
+        UUID periodoId = jdbc.query(
+                        """
+                        INSERT INTO periodo_expensas (periodo, presupuesto, estado, fecha_vencimiento, emitido_por,
+                                                      emitido_en)
+                        VALUES (?, ?, 'EMITIDO', ?, ?, now())
+                        ON CONFLICT (periodo) DO NOTHING
+                        RETURNING id
+                        """,
+                        (rs, i) -> rs.getObject("id", UUID.class),
+                        p.periodo().primerDia(),
+                        p.presupuesto().monto(),
+                        p.fechaVencimiento(),
+                        p.emitidoPor())
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new ReglaNegocioVioladaException(
+                        "F3", "Las expensas de " + p.periodo() + " ya fueron emitidas"));
 
         String concepto = "Expensa " + p.periodo().primerDia().format(MES_ANIO);
         List<Object[]> cargos = new ArrayList<>();

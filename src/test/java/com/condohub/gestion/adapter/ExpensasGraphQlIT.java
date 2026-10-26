@@ -1,11 +1,20 @@
 package com.condohub.gestion.adapter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
+import com.condohub.gestion.application.port.out.AlicuotaRepository;
+import com.condohub.gestion.application.port.out.PeriodoExpensasRepository;
+import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
+import com.condohub.gestion.domain.model.PeriodoExpensas;
+import com.condohub.gestion.domain.service.CalculadoraExpensas;
+import com.condohub.gestion.domain.valueobject.Dinero;
+import com.condohub.gestion.domain.valueobject.Periodo;
 import java.math.BigDecimal;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -68,6 +77,30 @@ class ExpensasGraphQlIT {
                         + " WHERE p.periodo = DATE '2030-12-01' AND c.tipo = 'EXPENSA'",
                 BigDecimal.class);
         assertThat(suma).isEqualByComparingTo("60000.00");
+    }
+
+    @Autowired PeriodoExpensasRepository periodos;
+    @Autowired AlicuotaRepository alicuotas;
+
+    @Test
+    void F3_si_dos_emisiones_del_mismo_periodo_se_cruzan_la_segunda_responde_F3() {
+        // Simula la carrera: la segunda emisión ya pasó el chequeo existe() cuando la primera guarda.
+        Supplier<PeriodoExpensas> emision = () -> PeriodoExpensas.emitir(
+                Periodo.de("2032-03"),
+                Periodo.de("2026-10"),
+                Dinero.de("60000"),
+                alicuotas.deUnidadesActivas(),
+                10,
+                ADMIN,
+                new CalculadoraExpensas());
+        periodos.guardar(emision.get());
+
+        assertThatThrownBy(() -> periodos.guardar(emision.get()))
+                .isInstanceOfSatisfying(
+                        ReglaNegocioVioladaException.class, e -> assertThat(e.codigo()).isEqualTo("F3"));
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM periodo_expensas WHERE periodo = DATE '2032-03-01'", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test

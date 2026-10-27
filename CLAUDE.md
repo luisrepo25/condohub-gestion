@@ -70,6 +70,8 @@ Los porcentajes y días son parámetros (tabla `parametro`), no constantes.
 Publica (vía Outbox): `ExpensasEmitidas`, `CargoAplicado`, `CargoAnulado`, `PagoRegistrado`, `PagoConfirmado`, `PagoRechazado`, `RecargoPropuesto`, `RecargoConfirmado`.
 Consume: `reservas.AplicarCargosReserva`, `reservas.AnularCargosReserva` (tabla `evento_procesado` para idempotencia).
 
+Saga de reserva, paso 2 (27/10/2026): `adapter/in/messaging/ComandosReservaListener` lee la cola `finanzas.reservas` (la declara `SagaReservasConfig` con los mismos argumentos que `infra/rabbitmq/definitions.json`) y llama a `AplicarCargosReservaService` (R5: `USO_AREA` y, en el salón, `GARANTIA`; montos 0 no crean cargo; `referencia_externa` = reservaId; aplica el saldo a favor, F7) o a `AnularCargosReservaService` (R6/R7: `TODOS` o `SOLO_GARANTIA`; nota de crédito por el monto y el cargo pasa a `ANULADO`, nunca se borra, F6; lo ya pagado vuelve como saldo a favor y se aplica a otros cargos, F7). Responde `finanzas.CargoAplicado` / `CargoAnulado` por el outbox con el `sagaId` del comando y un `eventId` derivado del comando (S5). Un mensaje fuera de contrato o con una unidad inexistente va a la DLQ sin reintentos; un fallo técnico se reintenta 3 veces y luego va a la DLQ. Se apaga con `SAGA_CONSUMIDOR_HABILITADO=false` (las pruebas lo apagan salvo `SagaReservasIT`). `TODO(regla)`: R5 no dice cuándo vencen estos cargos; se usa el día de vencimiento (F4) del mes siguiente, como el recargo (F5).
+
 ## Comandos
 
 ```bash

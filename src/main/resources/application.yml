@@ -23,6 +23,18 @@ spring:
     username: ${RABBITMQ_USER:condohub}
     password: ${RABBITMQ_PASSWORD:condohub}
     publisher-confirm-type: simple    # S4: el outbox marca un evento publicado solo con la confirmación del broker
+    listener:
+      simple:
+        # Consumidor de la saga (finanzas.reservas): un mensaje a la vez, en orden. Un fallo técnico se reintenta 3
+        # veces con espera creciente; si persiste, el mensaje va a la DLQ (condohub.events.dlx), nunca se reencola sin fin.
+        concurrency: 1
+        prefetch: 1
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
   security:
     oauth2:
       resourceserver:
@@ -37,3 +49,7 @@ condohub:
     intervalo-ms: ${OUTBOX_INTERVALO_MS:2000}
     relay:
       habilitado: ${OUTBOX_RELAY_HABILITADO:true}
+  saga:
+    cola: finanzas.reservas
+    consumidor:
+      habilitado: ${SAGA_CONSUMIDOR_HABILITADO:true}

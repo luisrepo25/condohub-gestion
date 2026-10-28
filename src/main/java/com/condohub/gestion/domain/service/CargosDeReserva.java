@@ -11,8 +11,8 @@ import java.util.List;
  * R5: los cargos de una reserva. El salón de eventos genera costo de uso y garantía; las demás áreas solo costo de uso,
  * que puede ser 0. Un monto 0 no genera cargo (un cargo siempre es mayor a 0, F10).
  *
- * <p>TODO(regla): R5 no dice cuándo vencen estos cargos. Se usa el mismo criterio que el recargo (F5): el día de
- * vencimiento (F4) del mes siguiente a su emisión, así el residente tiene tiempo de pagarlos.
+ * <p>R5: vencen como el recargo (F5), el día de vencimiento (F4) del mes siguiente a su aplicación, así nunca nacen
+ * vencidos y el residente tiene tiempo de pagarlos.
  */
 public final class CargosDeReserva {
 

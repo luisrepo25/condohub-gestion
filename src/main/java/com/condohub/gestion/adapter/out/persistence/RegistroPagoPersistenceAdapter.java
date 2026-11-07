@@ -1,6 +1,7 @@
 package com.condohub.gestion.adapter.out.persistence;
 
 import com.condohub.gestion.application.port.out.RegistroPagoRepository;
+import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import com.condohub.gestion.domain.model.EstadoPago;
 import com.condohub.gestion.domain.model.Pago;
 import com.condohub.gestion.domain.model.RegistroDePago;
@@ -13,6 +14,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -41,23 +43,41 @@ public class RegistroPagoPersistenceAdapter implements RegistroPagoRepository {
     }
 
     @Override
+    public boolean existeOperacion(String banco, String nroOperacion) {
+        // Mismo criterio que el índice único ux_pago_operacion: los pagos rechazados liberan el número (F8).
+        Integer cantidad = jdbc.queryForObject(
+                "SELECT count(*) FROM pago WHERE banco = ? AND nro_operacion = ? AND estado <> 'RECHAZADO'",
+                Integer.class,
+                banco,
+                nroOperacion);
+        return cantidad != null && cantidad > 0;
+    }
+
+    @Override
     public Pago guardar(RegistroDePago r) {
         // ON CONFLICT: si una petición con la misma clave se adelantó, no se duplica ni se aborta la transacción (O3).
-        var insertado = jdbc.query(
-                """
-                INSERT INTO pago (unidad_id, monto, fecha_pago, banco, idempotency_key, registrado_por, hora_dispositivo)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (idempotency_key) DO NOTHING
-                RETURNING """ + " " + COLUMNAS,
-                (rs, i) -> pago(rs),
-                r.unidadId(),
-                r.monto().monto(),
-                r.fechaPago(),
-                r.banco(),
-                r.idempotencyKey().valor(),
-                r.registradoPor(),
-                r.horaDispositivo() == null ? null : Timestamp.from(r.horaDispositivo()));
-        return insertado.stream().findFirst().or(() -> porIdempotencyKey(r.idempotencyKey())).orElseThrow();
+        try {
+            var insertado = jdbc.query(
+                    """
+                    INSERT INTO pago (unidad_id, monto, fecha_pago, banco, idempotency_key, registrado_por, hora_dispositivo,
+                                      nro_operacion)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (idempotency_key) DO NOTHING
+                    RETURNING """ + " " + COLUMNAS,
+                    (rs, i) -> pago(rs),
+                    r.unidadId(),
+                    r.monto().monto(),
+                    r.fechaPago(),
+                    r.banco(),
+                    r.idempotencyKey().valor(),
+                    r.registradoPor(),
+                    r.horaDispositivo() == null ? null : Timestamp.from(r.horaDispositivo()),
+                    r.nroOperacion());
+            return insertado.stream().findFirst().or(() -> porIdempotencyKey(r.idempotencyKey())).orElseThrow();
+        } catch (DuplicateKeyException e) {
+            // Dos registros simultáneos del mismo comprobante: ux_pago_operacion deja pasar solo uno (F8).
+            throw new ReglaNegocioVioladaException("F8", "Ese comprobante ya fue registrado (banco y número de operación)");
+        }
     }
 
     private static Pago pago(ResultSet rs) throws SQLException {

@@ -19,9 +19,23 @@ public record RegistroDePago(
         String banco,
         IdempotencyKey idempotencyKey,
         String registradoPor,
-        Instant horaDispositivo) {
+        Instant horaDispositivo,
+        String nroOperacion) {
 
     static final int BANCO_LARGO_MAXIMO = 60;
+    static final int NRO_OPERACION_LARGO_MAXIMO = 60;
+
+    /** Sin número de operación (F8): el comprobante no lo trae. */
+    public RegistroDePago(
+            UUID unidadId,
+            Dinero monto,
+            LocalDate fechaPago,
+            String banco,
+            IdempotencyKey idempotencyKey,
+            String registradoPor,
+            Instant horaDispositivo) {
+        this(unidadId, monto, fechaPago, banco, idempotencyKey, registradoPor, horaDispositivo, null);
+    }
 
     public RegistroDePago {
         Objects.requireNonNull(unidadId, "unidadId");
@@ -36,6 +50,11 @@ public record RegistroDePago(
         if (banco != null && banco.length() > BANCO_LARGO_MAXIMO) {
             throw new ReglaNegocioVioladaException(
                     "F8", "El banco admite como máximo " + BANCO_LARGO_MAXIMO + " caracteres");
+        }
+        nroOperacion = nroOperacion == null || nroOperacion.isBlank() ? null : nroOperacion.trim();
+        if (nroOperacion != null && nroOperacion.length() > NRO_OPERACION_LARGO_MAXIMO) {
+            throw new ReglaNegocioVioladaException(
+                    "F8", "El número de operación admite como máximo " + NRO_OPERACION_LARGO_MAXIMO + " caracteres");
         }
     }
 

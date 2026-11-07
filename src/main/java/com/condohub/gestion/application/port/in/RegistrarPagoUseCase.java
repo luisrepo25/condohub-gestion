@@ -20,5 +20,18 @@ public interface RegistrarPagoUseCase {
             String fechaPago,
             String banco,
             String idempotencyKey,
-            String horaDispositivo) {}
+            String horaDispositivo,
+            String nroOperacion) {
+
+        /** Sin número de operación (F8): el comprobante no lo trae o el cliente no lo informa. */
+        public Comando(
+                UUID unidadId,
+                BigDecimal monto,
+                String fechaPago,
+                String banco,
+                String idempotencyKey,
+                String horaDispositivo) {
+            this(unidadId, monto, fechaPago, banco, idempotencyKey, horaDispositivo, null);
+        }
+    }
 }

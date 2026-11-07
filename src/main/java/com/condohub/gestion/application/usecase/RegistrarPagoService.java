@@ -72,12 +72,25 @@ public class RegistrarPagoService implements RegistrarPagoUseCase {
                 comando.banco(),
                 clave,
                 solicitante.sub(),
-                horaDispositivo(comando.horaDispositivo()));
+                horaDispositivo(comando.horaDispositivo()),
+                comando.nroOperacion());
+        exigirOperacionNueva(registro);
         var pago = pagos.guardar(registro);
         // S4: el evento queda en el outbox en la misma transacción. Su eventId sale del pago, así un registro
         // concurrente con la misma clave no lo duplica (S5).
         eventos.publicar(new PagoRegistrado(pago.id(), pago.unidadId(), pago.monto(), pago.fechaPago(), registro.banco()));
         return pago;
+    }
+
+    /** F8: el mismo comprobante bancario (banco + número de operación) no se registra dos veces. */
+    private void exigirOperacionNueva(RegistroDePago registro) {
+        if (registro.banco() != null
+                && registro.nroOperacion() != null
+                && pagos.existeOperacion(registro.banco(), registro.nroOperacion())) {
+            throw new ReglaNegocioVioladaException(
+                    "F8",
+                    "Ese comprobante ya fue registrado (" + registro.banco() + ", operación " + registro.nroOperacion() + ")");
+        }
     }
 
     private static LocalDate fecha(String valor) {

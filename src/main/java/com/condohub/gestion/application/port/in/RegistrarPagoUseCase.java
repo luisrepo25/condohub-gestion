@@ -21,7 +21,8 @@ public interface RegistrarPagoUseCase {
             String banco,
             String idempotencyKey,
             String horaDispositivo,
-            String nroOperacion) {
+            String nroOperacion,
+            String comprobanteKey) {
 
         /** Sin número de operación (F8): el comprobante no lo trae o el cliente no lo informa. */
         public Comando(
@@ -31,7 +32,19 @@ public interface RegistrarPagoUseCase {
                 String banco,
                 String idempotencyKey,
                 String horaDispositivo) {
-            this(unidadId, monto, fechaPago, banco, idempotencyKey, horaDispositivo, null);
+            this(unidadId, monto, fechaPago, banco, idempotencyKey, horaDispositivo, null, null);
+        }
+
+        /** Sin foto del comprobante (F8): sin conexión, o el cliente no la subió. */
+        public Comando(
+                UUID unidadId,
+                BigDecimal monto,
+                String fechaPago,
+                String banco,
+                String idempotencyKey,
+                String horaDispositivo,
+                String nroOperacion) {
+            this(unidadId, monto, fechaPago, banco, idempotencyKey, horaDispositivo, nroOperacion, null);
         }
     }
 }

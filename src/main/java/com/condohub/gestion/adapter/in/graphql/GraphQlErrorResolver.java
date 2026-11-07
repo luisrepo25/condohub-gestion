@@ -1,5 +1,6 @@
 package com.condohub.gestion.adapter.in.graphql;
 
+import com.condohub.gestion.domain.exception.AlmacenNoDisponibleException;
 import com.condohub.gestion.domain.exception.RecursoNoEncontradoException;
 import com.condohub.gestion.domain.exception.ReglaNegocioVioladaException;
 import graphql.GraphQLError;
@@ -26,6 +27,9 @@ class GraphQlErrorResolver extends DataFetcherExceptionResolverAdapter {
         }
         if (ex instanceof RecursoNoEncontradoException noEncontrado) {
             return error(env, ErrorType.NOT_FOUND, noEncontrado.getMessage(), "NOT_FOUND");
+        }
+        if (ex instanceof AlmacenNoDisponibleException) {
+            return error(env, ErrorType.INTERNAL_ERROR, "El almacén de documentos no está disponible", "ALMACEN_NO_DISPONIBLE");
         }
         if (ex instanceof BindException argumento) {
             // Un argumento mal formado (p. ej. un código «B-102» donde va un UUID) es un error de quien llama, no del servidor.

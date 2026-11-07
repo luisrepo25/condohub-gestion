@@ -31,11 +31,12 @@ class PagosMutationController {
             @Argument String idempotencyKey,
             @Argument String horaDispositivo,
             @Argument String nroOperacion,
+            @Argument String comprobanteKey,
             Authentication autenticacion) {
         var p = registrarPago.registrar(
                 SolicitanteMapper.desde(autenticacion),
                 new RegistrarPagoUseCase.Comando(
-                        unidadId, monto, fechaPago, banco, idempotencyKey, horaDispositivo, nroOperacion));
+                        unidadId, monto, fechaPago, banco, idempotencyKey, horaDispositivo, nroOperacion, comprobanteKey));
         return new PagoDto(p.id(), p.unidadId(), p.monto().monto(), p.fechaPago().toString(), p.estado().name());
     }
 }

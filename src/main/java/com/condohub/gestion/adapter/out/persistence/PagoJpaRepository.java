@@ -9,6 +9,6 @@ import org.springframework.data.repository.query.Param;
 interface PagoJpaRepository extends JpaRepository<PagoJpa, UUID> {
 
     /** {@code estado} es un enum nativo de PostgreSQL ({@code estado_pago}); de ahí el CAST. */
-    @Query(nativeQuery = true, value = "SELECT * FROM pago WHERE estado = CAST(:estado AS estado_pago) ORDER BY fecha_pago ASC")
+    @Query(nativeQuery = true, value = "SELECT * FROM pago WHERE estado = CAST(:estado AS estado_pago) ORDER BY registrado_en DESC")
     List<PagoJpa> findByEstadoOrderByFechaPagoAsc(@Param("estado") String estado);
 }
